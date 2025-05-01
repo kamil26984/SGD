@@ -87,7 +87,7 @@ def runGame(isFirstGame):
 
     # Set up a blank board data structure.
     mainBoard = getNewBoard()
-    turnCounter = 1
+    turnCounter = 0
 
     while True: # main game loop
         drawBoard(mainBoard)
@@ -375,7 +375,7 @@ def displayCurrentPlayer(turn, turnCounter):
     textRect = textSurf.get_rect()
     textRect.topright = (WINDOWWIDTH - 10, 10)
     DISPLAYSURF.blit(textSurf, textRect)
-    print(currentPlayerText)
+    #print(currentPlayerText)
     pygame.display.update()
 
 
