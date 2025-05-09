@@ -1,5 +1,5 @@
 
-#  Prosty Prototyp Gry 2D – Projekt na potrzeby przedmiotu "Symulacje i Gry Decyzyjne"
+#  Prosty Prototyp Gry 2D – Projekt na potrzeby przedmiotu Symulacje i Gry Decyzyjne
 
 ---
 
