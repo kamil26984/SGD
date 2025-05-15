@@ -39,6 +39,17 @@ score = 0  # Wynik gracza
 score_font = pygame.font.SysFont("comicsans", 24)
 leaderboard_file = "leaderboard.txt"  # Plik z wynikami
 
+level = 1
+enemy_count = 3  # Liczba przeciwników na poziomie
+
+upgrade_state = "none"  # Stan ulepszeń
+
+upgrade_options = [
+    {"image": "assets/upgrades/upgrade_speed.png", "type": "speed"},
+    {"image": "assets/upgrades/upgrade_fire.png", "type": "fire_rate"},
+    {"image": "assets/upgrades/upgrade.png", "type": "health"},
+]
+
 # Parametry pocisków
 bullets = []  # Lista aktywnych pocisków
 bullet_speed = 400  # Prędkość pocisków
@@ -97,7 +108,7 @@ def spawn_enemies(count):
         while True:
             x = random.randint(0, 800)
             y = random.randint(0, 600)
-            if pygame.Vector2(x, y).distance_to(player_pos) > 150:  # Przeciwnicy nie mogą być zbyt blisko gracza
+            if pygame.Vector2(x, y).distance_to(player_pos) > 350:  # Przeciwnicy nie mogą być zbyt blisko gracza
                 break
         enemies.append({"pos": pygame.Vector2(x, y)})
 
@@ -109,7 +120,60 @@ def reset_game():
     last_shot_time = pygame.time.get_ticks()  # Reset czasu ostatniego strzału
     player_hp = 3  # Reset punktów życia
     score = 0  # Reset wyniku
-    spawn_enemies(6)  # Generowanie przeciwników
+    spawn_enemies(enemy_count)  # Generowanie przeciwników
+
+
+# Funkcja do rysowania ulepszeń
+def show_upgrade_screen():
+    global state
+    draw_text("Upgrade", (400, 300), WHITE)
+    x_positions = [200, 400, 600]
+
+    for i, option in enumerate(upgrade_options):
+        image = pygame.image.load(resource_path(option["image"])).convert_alpha()
+        image = pygame.transform.scale(image, (96, 96))
+        screen.blit(image, (x_positions[i] - 48, 250))
+        option["rect"] = pygame.Rect(x_positions[i] - 48, 250, 96, 96)
+
+    pygame.display.flip()
+
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                pos = pygame.mouse.get_pos()
+                for option in upgrade_options:
+                    if option["rect"].collidepoint(pos):
+                        apply_upgrade(option["type"])
+                        waiting = False
+                        break
+
+# Funkcja do zastosowania ulepszenia
+def apply_upgrade(upgrade_type):
+    global player_speed, fire_interval, player_hp
+    if upgrade_type == "speed":
+        player_speed += 20
+    elif upgrade_type == "fire_rate":
+        fire_interval = max(100, fire_interval - 50)  # Minimalny czas między strzałami
+    elif upgrade_type == "health":
+        player_hp += 1
+
+# Countdown do rozpoczęcia gry
+def countdown():
+    countdown_time = 3
+    while countdown_time > 0:
+        screen.fill(BLACK)
+        draw_text(str(countdown_time), (400, 300), WHITE)
+        pygame.display.flip()
+        pygame.time.delay(1000)
+        countdown_time -= 1
+    #screen.fill(BLACK)
+    pygame.display.flip()
+
+
+
 
 # Funkcja do zapisywania wyniku do pliku
 def save_score():
@@ -174,6 +238,7 @@ while running:
 
         elif state == "game_over":
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                level = 1
                 state = "start"
 
         elif state == "play":
@@ -216,6 +281,18 @@ while running:
         for i, line in enumerate(leaderboard):
             draw_text(line, (400, 350 + i * 30), WHITE)
 
+    elif state == "upgrade":
+        draw_gradient_background()
+        draw_text(f"Level {level} - Choose an upgrade", (400, 50), GOLD)
+        show_upgrade_screen()
+        level += 1
+        player_pos = pygame.Vector2(400, 300)
+        enemy_count += 2
+        spawn_enemies(enemy_count)
+
+
+        state = "play"
+
         # Efekt fajerwerków
         for i in range(100):
             x = random.randint(0, 800)
@@ -224,7 +301,9 @@ while running:
             pygame.draw.circle(screen, color, (x, y), random.randint(2, 5))
 
     elif state == "play":
-        # Sterowanie gracza
+        if not hasattr(countdown, "shown") or not countdown.shown:
+            countdown()
+            countdown.shown = True        # Sterowanie gracza
         keys = pygame.key.get_pressed()
         move = pygame.Vector2(0, 0)
         if keys[pygame.K_w]: move.y = -1
@@ -254,8 +333,10 @@ while running:
                     enemies.remove(enemy)
                     score += 10
                     if not enemies:
-                        save_score()
-                        state = "victory"
+                        #save_score()
+                        #state = "victory"
+                        state = "upgrade"
+
                     break
 
         # Ruch przeciwników + kolizje z graczem
@@ -282,7 +363,7 @@ while running:
         screen.blit(player_image, player_pos)
 
         # Rysowanie przeciwników
-        enemy_image_path = resource_path("assets/tmp.png")
+        enemy_image_path = resource_path("assets/enemy.png")
         enemy_image = pygame.image.load(enemy_image_path).convert_alpha()
         enemy_image = pygame.transform.scale(enemy_image, (enemy_radius * 2, enemy_radius * 4))
         for enemy in enemies:
@@ -294,6 +375,14 @@ while running:
 
         # Wyświetlanie HP
         draw_text(f"HP: {player_hp}", (60, 30), RED)
+
+        # Wyświetlanie poziomu
+        draw_text(f"Level: {level}", (700, 60), GOLD)
+
+        #Wyświetlanie ulepszeń
+        draw_text(f"speed: {player_speed}", (350, 30), GREEN)
+        draw_text(f"fire rate: {fire_interval}", (350, 60), GREEN)
+
 
         # Wyświetlanie wyniku
         draw_text(f"Score: {score}", (700, 30), GOLD)
