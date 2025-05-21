@@ -37,6 +37,9 @@ player_radius = 20  # Promień gracza (do kolizji)
 player_hp = 3  # Liczba punktów życia gracza
 score = 0  # Wynik gracza
 score_font = pygame.font.SysFont("comicsans", 24)
+if not os.path.exists("leaderboard.txt"):
+    with open("leaderboard.txt", "w") as f:
+        f.write("")
 leaderboard_file = "leaderboard.txt"  # Plik z wynikami
 
 level = 1
@@ -67,6 +70,10 @@ enemies = []  # Lista aktywnych przeciwników
 splashes = []  # Lista efektów po pokonaniu przeciwnika
 # Stan gry
 state = "start"  # Możliwe stany: start, play, pause, game_over, victory
+
+
+player_hit_time = 0  # Czas ostatniego trafienia gracza
+player_hit_duration = 300  # Czas trwania efektu trafienia (ms)
 
 # Funkcja do rysowania tekstu na ekranie
 def draw_text(text, pos, color=WHITE):
@@ -108,7 +115,7 @@ def spawn_enemies(count):
         while True:
             x = random.randint(0, 800)
             y = random.randint(0, 600)
-            if pygame.Vector2(x, y).distance_to(player_pos) > 350:  # Przeciwnicy nie mogą być zbyt blisko gracza
+            if pygame.Vector2(x, y).distance_to(player_pos) > 400:  # Przeciwnicy nie mogą być zbyt blisko gracza
                 break
         enemies.append({"pos": pygame.Vector2(x, y)})
 
@@ -120,13 +127,13 @@ def reset_game():
     last_shot_time = pygame.time.get_ticks()  # Reset czasu ostatniego strzału
     player_hp = 3  # Reset punktów życia
     score = 0  # Reset wyniku
+    enemy_count = 3  # Reset liczby przeciwników
     spawn_enemies(enemy_count)  # Generowanie przeciwników
 
 
 # Funkcja do rysowania ulepszeń
 def show_upgrade_screen():
     global state
-    draw_text("Upgrade", (400, 300), WHITE)
     x_positions = [200, 400, 600]
 
     for i, option in enumerate(upgrade_options):
@@ -134,6 +141,7 @@ def show_upgrade_screen():
         image = pygame.transform.scale(image, (96, 96))
         screen.blit(image, (x_positions[i] - 48, 250))
         option["rect"] = pygame.Rect(x_positions[i] - 48, 250, 96, 96)
+        draw_text(option["type"], (x_positions[i], 370), WHITE)
 
     pygame.display.flip()
 
@@ -347,9 +355,12 @@ while running:
             if enemy["pos"].distance_to(player_pos) < (player_radius + enemy_radius):
                 enemies.remove(enemy)
                 player_hp -= 1
+                player_hit_time = pygame.time.get_ticks()
                 if player_hp <= 0:
                     save_score()
                     state = "game_over"
+                elif not enemies:
+                    state = "upgrade"
 
         # Rysowanie tła i dekoracji
         draw_gradient_background()
@@ -361,6 +372,10 @@ while running:
         player_image = pygame.image.load(player_image_path).convert_alpha()
         player_image = pygame.transform.scale(player_image, (player_radius * 2, player_radius * 2))
         screen.blit(player_image, player_pos)
+        if player_hit_time and pygame.time.get_ticks() - player_hit_time < player_hit_duration:
+            hit_overlay = pygame.Surface((player_radius * 2, player_radius * 2), pygame.SRCALPHA)
+            hit_overlay.fill((255, 0, 0, 128))  # Czerwony overlay
+            screen.blit(hit_overlay, player_pos)
 
         # Rysowanie przeciwników
         enemy_image_path = resource_path("assets/enemy.png")

@@ -10,11 +10,6 @@ Gracz steruje postacią poruszającą się po prostej mapie z przeszkodami. Celu
 ---
 
 
-##  Zrzuty ekranu
-
-
----
-
 
 
 
